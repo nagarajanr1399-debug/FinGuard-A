@@ -1,0 +1,90 @@
+-- FinGuard AI — Exasol High-Throughput Analytical Query Library
+-- Track 01: Money, Risk & Regulation
+
+-- 1. Velocity & Aggregation Window Scan (Exasol Analytic Window Function)
+-- Calculates 10-minute and 1-hour rolling transaction frequencies and cumulative amount
+SELECT 
+    t.TXN_ID,
+    t.CUSTOMER_ID,
+    t.AMOUNT,
+    t.TIMESTAMP,
+    COUNT(t.TXN_ID) OVER (
+        PARTITION BY t.CUSTOMER_ID 
+        ORDER BY t.TIMESTAMP 
+        RANGE BETWEEN INTERVAL '10' MINUTE PRECEDING AND CURRENT ROW
+    ) AS ROLLING_10M_COUNT,
+    COUNT(t.TXN_ID) OVER (
+        PARTITION BY t.CUSTOMER_ID 
+        ORDER BY t.TIMESTAMP 
+        RANGE BETWEEN INTERVAL '1' HOUR PRECEDING AND CURRENT ROW
+    ) AS ROLLING_1H_COUNT,
+    SUM(t.AMOUNT) OVER (
+        PARTITION BY t.CUSTOMER_ID 
+        ORDER BY t.TIMESTAMP 
+        RANGE BETWEEN INTERVAL '1' HOUR PRECEDING AND CURRENT ROW
+    ) AS ROLLING_1H_VOLUME
+FROM FINGUARD.TRANSACTIONS t
+WHERE t.TIMESTAMP >= CURRENT_TIMESTAMP - INTERVAL '7' DAY;
+
+-- 2. Customer 30-Day Baseline Deviation Query
+-- Calculates deviation ratio against customer mean and standard deviation
+SELECT 
+    t.TXN_ID,
+    t.AMOUNT,
+    c.AVG_TXN_AMOUNT,
+    c.STD_DEV_AMOUNT,
+    CASE 
+        WHEN c.STD_DEV_AMOUNT > 0 THEN ROUND((t.AMOUNT - c.AVG_TXN_AMOUNT) / c.STD_DEV_AMOUNT, 2)
+        WHEN c.AVG_TXN_AMOUNT > 0 THEN ROUND(t.AMOUNT / c.AVG_TXN_AMOUNT, 2)
+        ELSE 1.00
+    END AS Z_SCORE_DEVIATION
+FROM FINGUARD.TRANSACTIONS t
+JOIN FINGUARD.CUSTOMERS c ON t.CUSTOMER_ID = c.CUSTOMER_ID
+WHERE t.TXN_ID = :txn_id;
+
+-- 3. Structuring / Smurfing Multi-hop Pattern Detection
+-- Identifies burst transactions just below regulatory reporting thresholds (e.g. ₹50,000 / $10,000)
+SELECT 
+    t.CUSTOMER_ID,
+    c.FULL_NAME,
+    COUNT(t.TXN_ID) AS STRUCTURING_TXN_COUNT,
+    SUM(t.AMOUNT) AS TOTAL_STRUCTURED_VOLUME,
+    MIN(t.AMOUNT) AS MIN_AMT,
+    MAX(t.AMOUNT) AS MAX_AMT,
+    MIN(t.TIMESTAMP) AS BURST_START,
+    MAX(t.TIMESTAMP) AS BURST_END
+FROM FINGUARD.TRANSACTIONS t
+JOIN FINGUARD.CUSTOMERS c ON t.CUSTOMER_ID = c.CUSTOMER_ID
+WHERE t.AMOUNT BETWEEN 45000 AND 49999
+   OR t.AMOUNT BETWEEN 9000 AND 9999
+GROUP BY t.CUSTOMER_ID, c.FULL_NAME
+HAVING COUNT(t.TXN_ID) >= 3;
+
+-- 4. Circular Flow of Funds & Money Mule Pass-through Query
+-- Connects incoming funds with rapid outgoing funds within 15 minutes
+SELECT 
+    incoming.COUNTERPARTY_NAME AS SOURCE_ENTITY,
+    incoming.CUSTOMER_ID AS MULE_ACCOUNT_ID,
+    outgoing.COUNTERPARTY_NAME AS DESTINATION_ENTITY,
+    incoming.AMOUNT AS INFLOW_AMOUNT,
+    outgoing.AMOUNT AS OUTFLOW_AMOUNT,
+    incoming.TIMESTAMP AS INFLOW_TIME,
+    outgoing.TIMESTAMP AS OUTFLOW_TIME,
+    ROUND((outgoing.AMOUNT / NULLIF(incoming.AMOUNT, 0)) * 100, 2) AS PASS_THROUGH_PCT
+FROM FINGUARD.TRANSACTIONS incoming
+JOIN FINGUARD.TRANSACTIONS outgoing 
+  ON incoming.CUSTOMER_ID = outgoing.CUSTOMER_ID
+WHERE outgoing.TIMESTAMP BETWEEN incoming.TIMESTAMP AND incoming.TIMESTAMP + INTERVAL '15' MINUTE
+  AND incoming.CHANNEL IN ('IMPS', 'UPI', 'RTGS')
+  AND outgoing.CHANNEL IN ('IMPS', 'UPI', 'RTGS', 'SWIFT');
+
+-- 5. Executive Dashboard KPI Aggregation Scan
+-- High-throughput columnar aggregation over all transactions
+SELECT 
+    COUNT(*) AS TOTAL_TXNS,
+    SUM(AMOUNT) AS TOTAL_VOLUME,
+    AVG(AMOUNT) AS MEAN_TXN_SIZE,
+    COUNT(CASE WHEN STATUS = 'FLAGGED' THEN 1 END) AS FLAGGED_COUNT,
+    COUNT(CASE WHEN STATUS = 'UNDER_INVESTIGATION' THEN 1 END) AS INVESTIGATION_COUNT,
+    COUNT(CASE WHEN STATUS = 'REPORTED_SAR' THEN 1 END) AS SAR_COUNT
+FROM FINGUARD.TRANSACTIONS;

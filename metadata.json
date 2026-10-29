@@ -1,0 +1,6 @@
+{
+  "name": "FinGuard AI — Explainable Financial Fraud & Risk Intelligence",
+  "description": "Explainable financial fraud and risk intelligence platform with Exasol analytics, deterministic risk scoring, and Gemini copilot investigation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
