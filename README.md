@@ -5,6 +5,16 @@
 [![Exasol](https://img.shields.io/badge/Exasol-Columnar_Analytics_v7.1-orange.svg)](https://www.exasol.com/)
 [![Gemini](https://img.shields.io/badge/Gemini-3.8_Flash_Grounded-cyan.svg)](https://ai.google.dev/)
 [![React](https://img.shields.io/badge/React-19_Vite_Tailwind-violet.svg)](https://react.dev/)
+[![Live App](https://img.shields.io/badge/Live_Demo-Online-success?style=for-the-badge&logo=googlecloud&logoColor=white)](https://ais-pre-nx5wjvpihdpg4nyn2pjrdo-20941126634.asia-east1.run.app)
+
+---
+
+## 🌐 Live Application Links
+
+- **🚀 Public Live Application URL:** [https://ais-pre-nx5wjvpihdpg4nyn2pjrdo-20941126634.asia-east1.run.app](https://ais-pre-nx5wjvpihdpg4nyn2pjrdo-20941126634.asia-east1.run.app)
+- **🛠️ Development Workspace URL:** [https://ais-dev-nx5wjvpihdpg4nyn2pjrdo-20941126634.asia-east1.run.app](https://ais-dev-nx5wjvpihdpg4nyn2pjrdo-20941126634.asia-east1.run.app)
+
+> **No setup or database installation required.** You can directly interact with the live analytics dashboard, transaction explorer, 360° investigation workbench, entity graph, what-if simulator, and grounded Gemini 3.8 Flash copilot using the live URL above.
 
 ---
 
